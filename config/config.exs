@@ -13,6 +13,11 @@ config :bamboo, :json_library, Jason
  config :vemosla_mail, :email,
  from: "info@vemosla.com"
 
+config :tesla, adapter: Tesla.Adapter.Hackney
+
+config :vemosla,
+ uploads_files_path: "files",
+ uploads_url_path: "/files"
 # Configure Mix tasks and generators
 config :vemosla,
   ecto_repos: [Vemosla.Repo]
