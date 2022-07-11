@@ -415,11 +415,52 @@ defmodule Vemosla.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
+  def update_profile(%Profile{} = profile,
+                    %{"photo" => %{}} = attrs) do
+    {final_path, copy_file} =
+    get_file_and_copy(attrs["photo"], profile.user_id)
+    Map.put(attrs, "photo", final_path)
+    changeset = Profile.changeset(profile, attrs)
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:update_profile, changeset)
+    |> Ecto.Multi.run(:copy_file, copy_file)
+    |> Repo.transaction()
+  end
   def update_profile(%Profile{} = profile, attrs) do
-    profile
-    |> Profile.changeset(attrs)
+    Profile.changeset(profile, attrs)
     |> Repo.update()
   end
+
+  defp get_file_and_copy(file, user_id) do
+      ext = case file.content_type do
+        "image/png" -> ".png"
+        "image/jpg" -> ".jpg"
+        "image/jpeg" -> ".jpg"
+        _ -> ".raw"
+      end
+      final_file = user_id <> ext
+      files_path = uploads_files_path()
+      url_path = uploads_url_path()
+      url_file = Path.join(url_path, final_file)
+      final_path = Path.join(files_path, final_file)
+      { url_file,
+        fn _repo, _changes ->
+          case File.cp(file.path, final_path) do
+          :ok -> {:ok, final_path}
+          error -> error
+        end
+      end
+      }
+    end
+
+    defp uploads_url_path() do
+      Application.get_env(:vemosla, :uploads_url_path)
+    end
+
+    defp uploads_files_path() do
+      Application.get_env(:vemosla, :uploads_files_path)
+    end
+
 
   @doc """
   Deletes a profile.
